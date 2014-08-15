@@ -1,0 +1,136 @@
+---
+title: "Untitled"
+author: "Ryan Cheung"
+date: "Thursday, August 14, 2014"
+output: html_document
+---
+
+### Install and Load Packages
+```{r}
+# choose 20 Beijing
+install.packages("caret")
+install.packages("rpart")
+install.packages("tree")
+install.packages("randomForest")
+install.packages("e1071")
+install.packages("ggplot2")
+install.packages("caTools")
+library(caret)
+library(rpart)
+library(tree)
+library(randomForest)
+library(e1071)
+library(ggplot2)
+library(caTools)
+```
+
+### Read in Data
+```{r}
+data <- read.csv("seaflow_21min.csv")
+```
+
+### Look at the Summary
+```{r}
+summary(data)
+```
+
+## Step 1: Read and summarize the data
+
+### Question 1   
+How many particles labeled "synecho" are in the file provided?
+```{r}
+sum(data$pop == 'synecho')
+summary(data$pop)
+table(data$pop)
+```
+
+### Question 2
+What is the 3rd Quantile of the field fsc_small? 
+```{r}
+summary(data$fsc_small)
+sort(data$fsc_small)[nrow(data)*0.75]
+```
+
+## Step 2: Split the data into test and training sets
+
+```{r}
+set.seed(123)
+split <- sample.split(data$pop, SplitRatio = 1/2)
+train <- subset(data, split == T)
+test <- subset(data, split == F)
+```
+
+### Question 3
+What is the mean of the variable "time" for your training set?
+```{r}
+mean(train$time)
+```
+
+## Step 3: Plot the data
+```{r}
+ggplot(train, aes(x = pe, y = chl_small, color = pop)) + geom_point()
+```
+
+### Question 4
+In the plot of pe vs. chl_small, the particles labeled ultra should appear to be somewhat "mixed" with two other populations of particles. Which two populations?
+
+ pico nano
+
+
+
+## Step 4: Train a decision tree.
+
+```{r}
+model <- rpart(pop~fsc_small + fsc_perp + fsc_big + pe + chl_big + chl_small, method = 'class', data = train)
+```
+
+
+```{r}
+print(model)
+plot(model)
+text(model)
+summary(train$pop)
+```
+
+### Question 5
+Use print(model) to inspect your tree. Which populations, if any, is your tree incapable of recognizing? (Which populations do not appear on any branch?) (It's possible, but very unlikely, that an incorrect answer to this question is the result of improbable sampling.)
+
+crypto
+
+### Question 6
+Most trees will include a node near the root that applies a rule to the pe field, where particles with a value less than some threshold will descend down one branch, and particles with a value greater than some threshold will descend down a different branch. If you look at the plot you created previously, you can verify that the threshold used in the tree is evident visually. What is the value of the threshold on the pe field learned in your model?
+
+5006.5
+
+### Question 7
+Based on your decision tree, which variables appear to be most important in predicting the class population?
+
+chl_small pe
+
+## Step 5: Evaluate the decision tree on the test data.
+```{r}
+pred <- predict(model, newdata = test, type = "class")
+sum(pred == test$pop)/nrow(test)
+table(pred, test$pop)
+```
+
+### Question 8
+How accurate was your decision tree on the test data? Enter a number between 0 and 1.
+
+## Step 6: Build and evaluate a random forest.
+```{r}
+modelRF <- randomForest(pop~fsc_small + fsc_perp + fsc_big + pe + chl_big + chl_small, method = 'class', data = train)
+```
+
+```{r}
+predRF <- predict(modelRF, newdata = test, type = "class")
+sum(predRF == test$pop)/nrow(test)
+table(predRF, test$pop)
+```
+
+
+Random forests can automatically generate an estimate of variable importance during training by permuting the values in a given variable and measuring the effect on classification. If scrambling the values has little effect on the model's ability to make predictions, then the variable must not be very important.
+
+A random forest can obtain another estimate of variable importance based on the Gini impurity that we discussed in the lecture. The function importance(model) prints the mean decrease in gini importance for each variable. The higher the number, the more the gini impurity score decreases by branching on this variable, indicating that the variable is more important.
+
+Call this function and answer Question 10.
