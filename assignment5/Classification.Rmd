@@ -7,14 +7,13 @@ output: html_document
 
 ### Install and Load Packages
 ```{r}
-# choose 20 Beijing
-install.packages("caret")
-install.packages("rpart")
-install.packages("tree")
-install.packages("randomForest")
-install.packages("e1071")
-install.packages("ggplot2")
-install.packages("caTools")
+#install.packages("caret")
+#install.packages("rpart")
+#install.packages("tree")
+#install.packages("randomForest")
+#install.packages("e1071")
+#install.packages("ggplot2")
+#install.packages("caTools")
 library(caret)
 library(rpart)
 library(tree)
@@ -111,7 +110,7 @@ chl_small pe
 ```{r}
 pred <- predict(model, newdata = test, type = "class")
 sum(pred == test$pop)/nrow(test)
-table(pred, test$pop)
+table <- table(prediction = pred, truth = test$pop)
 ```
 
 ### Question 8
@@ -122,15 +121,74 @@ How accurate was your decision tree on the test data? Enter a number between 0 a
 modelRF <- randomForest(pop~fsc_small + fsc_perp + fsc_big + pe + chl_big + chl_small, method = 'class', data = train)
 ```
 
+### Question 9
+What was the accuracy of your random forest model on the test data? Enter a number between 0 and 1.
+
 ```{r}
 predRF <- predict(modelRF, newdata = test, type = "class")
 sum(predRF == test$pop)/nrow(test)
-table(predRF, test$pop)
+tableRF <- table(prediction = predRF, truth = test$pop)
 ```
 
+### Question 10
+After calling importance(model), you should be able to determine which variables appear to be most important in terms of the gini impurity measure. Which ones are they?
 
-Random forests can automatically generate an estimate of variable importance during training by permuting the values in a given variable and measuring the effect on classification. If scrambling the values has little effect on the model's ability to make predictions, then the variable must not be very important.
+```{r}
+importance(modelRF)
+```
 
-A random forest can obtain another estimate of variable importance based on the Gini impurity that we discussed in the lecture. The function importance(model) prints the mean decrease in gini importance for each variable. The higher the number, the more the gini impurity score decreases by branching on this variable, indicating that the variable is more important.
+pe chl_small
 
-Call this function and answer Question 10.
+## Step 7: Train a support vector machine model and compare results.
+```{r}
+modelSVM <- svm(pop~fsc_small + fsc_perp + fsc_big + pe + chl_big + chl_small, method = 'class', data = train)
+```
+
+### Question 11
+What was the accuracy of your support vector machine model on the test data? Enter a number between 0 and 1.
+
+```{r}
+predSVM <- predict(modelSVM, newdata = test, type = "class")
+sum(predSVM == test$pop)/nrow(test)
+tableSVM <- table(prediction = predSVM, truth = test$pop)
+```
+
+## Step 8: Construct confusion matrices
+### Question 12
+Construct a confusion matrix for each of the three methods using the table function. What appears to be the most common error the models make?
+
+ultra is mistaken for pico
+```{r}
+tableSVM
+tableRF
+table
+```
+
+## Step 9: Sanity check the data
+### Question 13
+The variables in the dataset were assumed to be continuous, but one of them takes on only a few discrete values, suggesting a problem. Which variable exhibits this problem?
+```{r}
+length(unique(data$fsc_big))
+length(unique(data$fsc_small))
+length(unique(data$fsc_perp))
+length(unique(data$pe))
+length(unique(data$chl_small))
+length(unique(data$chl_big))
+```
+
+fsc_big
+
+### Question 14
+After removing data associated with file_id 208, what was the effect on the accuracy of your svm model? Enter a positive or negative number representing the net change in accuracy, where a positive number represents an improvement in accuracy and a negative number represents a decrease in accuracy.
+
+```{r}
+data208rm <- subset(data, data$file_id != 208) 
+set.seed(123)
+split208rm <- sample.split(data208rm$pop, SplitRatio = 1/2)
+train208rm <- subset(data208rm, split208rm == T)
+test208rm <- subset(data208rm, split208rm == F)
+modelSVM208rm <- svm(pop~fsc_small + fsc_perp + fsc_big + pe + chl_big + chl_small, method = 'class', data = train208rm)
+predSVM208rm <- predict(modelSVM208rm, newdata = test208rm, type = "class")
+sum(predSVM208rm == test208rm$pop)/nrow(test208rm)-sum(predSVM == test$pop)/nrow(test)
+```
+
